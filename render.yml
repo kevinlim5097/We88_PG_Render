@@ -1,0 +1,16 @@
+# 完整模板（推荐）
+services:
+  - type: web
+    name: we88-pg-test-system
+    runtime: python
+    branch: main
+    buildCommand: |
+      pip install -r requirements.txt
+      pip install gunicorn
+    startCommand: |
+      gunicorn --workers 2 --timeout 120 app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.16
+    plan: free
+    region: singapore

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Testing Management System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f1f1f1;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            margin-right: 5px;
+            border-radius: 5px 5px 0 0;
+        }
+        .tab.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 0 0 5px 5px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .test-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .test-btn {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .test-btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .test-btn:hover:not(:disabled) {
+            background-color: #45a049;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .fail {
+            color: #ff0000;
+            font-weight: bold;
+        }
+        .pass {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #4CAF50;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .view-report {
+            padding: 5px 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .view-report:hover {
+            background-color: #45a049;
+        }
+        .output-pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background-color: #f8f8f8;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="tabs">
+            <div class="tab active" data-tab="testcase">Testcase</div>
+            <div class="tab" data-tab="history">History</div>
+            <div class="tab" data-tab="report">Report</div>
+        </div>
+
+        <div id="testcase" class="tab-content active">
+            <h2>Test Cases</h2>
+            <p>Select test cases to run:</p>
+
+            <div class="test-buttons">
+                <button class="test-btn" id="testAll">Test All</button>
+                <button class="test-btn" id="testIndonesia">Test Indonesia</button>
+                <button class="test-btn" id="testMalaysia">Test Malaysia</button>
+                <button class="test-btn" id="testThailand">Test Thailand</button>
+                <button class="test-btn" id="testVietnam">Test Vietnam</button>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Running tests, please wait...</p>
+            </div>
+        </div>
+
+        <div id="history" class="tab-content">
+            <h2>Test History</h2>
+            <table id="historyTable">
+                <thead>
+                    <tr>
+                        <th>Test Case Name</th>
+                        <th>Date & Time</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- History records will be added dynamically -->
+                </tbody>
+            </table>
+        </div>
+
+        <div id="report" class="tab-content">
+            <h2>Test Report</h2>
+            <table id="reportTable">
+                <thead>
+                    <tr>
+                        <th>Test Case ID</th>
+                        <th>Status</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Report content will be added dynamically -->
+                </tbody>
+            </table>
+            <div id="detailedOutput" style="margin-top: 20px; display: none;">
+                <h3>Detailed Output</h3>
+                <pre class="output-pre" id="testOutput"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let testRunning = false;
+        let reports = [];
+
+        // DOM elements
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const testButtons = document.querySelectorAll('.test-btn');
+        const loadingElement = document.getElementById('loading');
+        const historyTableBody = document.querySelector('#historyTable tbody');
+        const reportTableBody = document.querySelector('#reportTable tbody');
+        const detailedOutputDiv = document.getElementById('detailedOutput');
+        const testOutputPre = document.getElementById('testOutput');
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Bind tab switching events
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+
+                    tab.classList.add('active');
+                    const tabId = tab.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+
+                    if (tabId === 'history') {
+                        loadHistory();
+                    }
+                });
+            });
+
+            // Bind test button click events
+            document.getElementById('testAll').addEventListener('click', () => runTests('All'));
+            document.getElementById('testIndonesia').addEventListener('click', () => runTests('Indonesia'));
+            document.getElementById('testMalaysia').addEventListener('click', () => runTests('Malaysia'));
+            document.getElementById('testThailand').addEventListener('click', () => runTests('Thailand'));
+            document.getElementById('testVietnam').addEventListener('click', () => runTests('Vietnam'));
+
+            // Load initial history
+            await loadHistory();
+        });
+
+        // Load history from server
+        async function loadHistory() {
+            try {
+                const response = await fetch('/get-reports');
+                reports = await response.json();
+                updateHistoryTable();
+            } catch (error) {
+                console.error('Error loading history:', error);
+                historyTableBody.innerHTML = '<tr><td colspan="4">Failed to load history</td></tr>';
+            }
+        }
+
+        // Run tests
+        async function runTests(testType) {
+            if (testRunning) return;
+
+            testRunning = true;
+            loadingElement.style.display = 'block';
+            disableTestButtons(true);
+
+            try {
+                const response = await fetch('/run-tests', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ test_type: testType })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const report = await response.json();
+                reports.unshift(report); // Add to beginning of array
+
+                // Switch to report tab
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+
+                document.querySelector('.tab[data-tab="report"]').classList.add('active');
+                document.getElementById('report').classList.add('active');
+
+                // Display latest report
+                displayReport(report);
+
+                // Update history
+                updateHistoryTable();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to run tests: ' + error.message);
+            } finally {
+                loadingElement.style.display = 'none';
+                disableTestButtons(false);
+                testRunning = false;
+            }
+        }
+
+        // Update history table
+        function updateHistoryTable() {
+            historyTableBody.innerHTML = '';
+
+            if (reports.length === 0) {
+                historyTableBody.innerHTML = '<tr><td colspan="4">No history records</td></tr>';
+                return;
+            }
+
+            reports.sort((a, b) => new Date(b.date_time) - new Date(a.date_time));
+
+            reports.forEach(report => {
+                const hasFailure = report.results.some(r => r.result.returncode !== 0);
+                const status = hasFailure ? '<span class="fail">FAIL</span>' : '<span class="pass">PASS</span>';
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${report.test_type === 'All' ? 'All Tests' : report.test_type + ' Test'}</td>
+                    <td>${report.date_time}</td>
+                    <td>${status}</td>
+                    <td>
+                        <button class="view-report" data-id="${report.id}">View Report</button>
+                        ${hasFailure ? '<button class="view-output" data-id="${report.id}" style="margin-left: 5px;">View Output</button>' : ''}
+                    </td>
+                `;
+                historyTableBody.appendChild(row);
+            });
+
+            // Bind view report button events
+            document.querySelectorAll('.view-report').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const reportId = this.getAttribute('data-id');
+                    const report = reports.find(r => r.id === reportId);
+
+                    if (report) {
+                        // Switch to report tab
+                        tabs.forEach(t => t.classList.remove('active'));
+                        tabContents.forEach(content => content.classList.remove('active'));
+
+                        document.querySelector('.tab[data-tab="report"]').classList.add('active');
+                        document.getElementById('report').classList.add('active');
+
+                        // Display report
+                        displayReport(report);
+                        detailedOutputDiv.style.display = 'none';
+                    }
+                });
+            });
+
+            // Bind view output button events
+            document.querySelectorAll('.view-output').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const reportId = this.getAttribute('data-id');
+                    const report = reports.find(r => r.id === reportId);
+
+                    if (report) {
+                        // Switch to report tab
+                        tabs.forEach(t => t.classList.remove('active'));
+                        tabContents.forEach(content => content.classList.remove('active'));
+
+                        document.querySelector('.tab[data-tab="report"]').classList.add('active');
+                        document.getElementById('report').classList.add('active');
+
+                        // Display report
+                        displayReport(report);
+
+                        // Show detailed output
+                        const failedTests = report.results.filter(r => r.result.returncode !== 0);
+                        if (failedTests.length > 0) {
+                            let output = '';
+                            failedTests.forEach(test => {
+                                output += `=== ${test.test_file} ===\n`;
+                                output += test.result.error || test.result.output || 'No output available';
+                                output += '\n\n';
+                            });
+                            testOutputPre.textContent = output;
+                            detailedOutputDiv.style.display = 'block';
+                        }
+                    }
+                });
+            });
+        }
+
+        // Display report
+        function displayReport(report) {
+            if (!report) {
+                reportTableBody.innerHTML = '<tr><td colspan="3">No test report available</td></tr>';
+                detailedOutputDiv.style.display = 'none';
+                return;
+            }
+
+            reportTableBody.innerHTML = '';
+
+            // Add summary row
+            const passedCount = report.results.filter(r => r.result.returncode === 0).length;
+            const failedCount = report.results.length - passedCount;
+
+            const summaryRow = document.createElement('tr');
+            summaryRow.style.backgroundColor = '#f9f9f9';
+            summaryRow.innerHTML = `
+                <td><strong>Summary - ${report.test_type === 'All' ? 'All Tests' : report.test_type + ' Test'}</strong></td>
+                <td>Total: ${report.results.length}</td>
+                <td>
+                    <span class="pass">Passed: ${passedCount}</span> |
+                    <span class="fail">Failed: ${failedCount}</span>
+                </td>
+            `;
+            reportTableBody.appendChild(summaryRow);
+
+            // Add test case rows
+            report.results.forEach(testResult => {
+                const testCase = testResult.result;
+                const status = testCase.returncode === 0 ? 'PASS' : 'FAIL';
+                const testId = testResult.test_file.replace('.py', '');
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${testId}</td>
+                    <td class="${status === 'PASS' ? 'pass' : 'fail'}">${status}</td>
+                    <td>${testCase.output ? testCase.output.split('\n')[0] : testCase.error ? testCase.error.split('\n')[0] : 'No output'}</td>
+                `;
+
+                if (status === 'FAIL') {
+                    row.addEventListener('click', () => {
+                        let output = '';
+                        if (testCase.error) {
+                            output += `=== ERROR ===\n${testCase.error}\n\n`;
+                        }
+                        if (testCase.output) {
+                            output += `=== OUTPUT ===\n${testCase.output}`;
+                        }
+                        if (!output) {
+                            output = 'No output available';
+                        }
+                        testOutputPre.textContent = output;
+                        detailedOutputDiv.style.display = 'block';
+                    });
+                    row.style.cursor = 'pointer';
+                }
+
+                reportTableBody.appendChild(row);
+            });
+        }
+        // Disable/enable test buttons
+        function disableTestButtons(disabled) {
+            testButtons.forEach(btn => {
+                btn.disabled = disabled;
+            });
+        }
+    </script>
+</body>
+</html>
