@@ -2,6 +2,7 @@
 import unittest
 import sys
 import os
+os.environ['PLAYWRIGHT_BROWSERS_PATH'] = '/opt/render/.cache/ms-playwright'
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from playwright.async_api import async_playwright
 from new_config import BASE_URL_INDO, headless, indo_close_all_popups_and_chat, indo, check_visible_text_for_errors

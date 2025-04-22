@@ -6,9 +6,10 @@ services:
     branch: main
     buildCommand: |
       pip install -r requirements.txt
-      pip install gunicorn
+      playwright install
+      playwright install-deps  # 安装系统依赖
     startCommand: |
-      gunicorn --workers 2 --timeout 120 app:app
+      gunicorn app:app
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.16
